@@ -1,0 +1,29 @@
+# Python & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.spec
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Build & Dist output (PyInstaller, etc.)
+build/
+dist/
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# IDE & Editor configs
+.vscode/
+.idea/
+
+# Local state / User data
+# Keep default templates if needed, but data.json is dynamic state
+data.json
