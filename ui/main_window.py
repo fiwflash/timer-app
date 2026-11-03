@@ -16,8 +16,8 @@ class MainWindow(QMainWindow):
 
         # ใช้ช่องว่างแทนชื่อ เพื่อไม่ให้แสดงข้อความบน Title Bar
         self.setWindowTitle(" ")
-        self.resize(1000, 680)
-        self.setMinimumSize(850, 550)
+        self.resize(960, 620)
+        self.setMinimumSize(800, 520)
 
         self.tabs = QTabWidget()
         self.tabs.setTabPosition(QTabWidget.West)
@@ -26,7 +26,7 @@ class MainWindow(QMainWindow):
         self.objects_tab = ObjectsTab(storage)
         self.groups_tab = GroupsTab(storage)
 
-        self.tabs.addTab(self.objects_tab, "Routines")
+        self.tabs.addTab(self.objects_tab, "Bank")
         self.tabs.addTab(self.groups_tab, "Groups")
         self.tabs.setCurrentIndex(1)
         self.setCentralWidget(self.tabs)

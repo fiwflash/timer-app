@@ -1,4 +1,4 @@
-"""Tab: manage Group list — selects and orders routines."""
+"""Tab: manage Group list — selects and orders routines via double-click."""
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem,
@@ -19,76 +19,88 @@ class GroupsTab(QWidget):
 
         # --- Left Side: Groups List ---
         self.group_list = QListWidget()
-        self.group_list.setFixedWidth(280)
+        self.group_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.group_list.currentRowChanged.connect(self._on_group_select)
 
-        self.btn_new = QPushButton("+ New Group")
+        self.btn_new = QPushButton("+ New")
         self.btn_del = QPushButton("Delete")
         self.btn_new.clicked.connect(self._new_group)
         self.btn_del.clicked.connect(self._delete_group)
 
         left = QVBoxLayout()
-        left.setSpacing(10)
-        left.addWidget(QLabel("<b>Groups</b>"))
+        left.setSpacing(8)
         left.addWidget(self.group_list, 1)
-        left.addWidget(self.btn_new)
-        left.addWidget(self.btn_del)
+
+        left_buttons = QHBoxLayout()
+        left_buttons.setSpacing(8)
+        left_buttons.addWidget(self.btn_new, 1)
+        left_buttons.addWidget(self.btn_del)
+        left.addLayout(left_buttons)
+
         left_w = QWidget()
         left_w.setLayout(left)
-        left_w.setFixedWidth(300)
+        left_w.setFixedWidth(270)
 
         # --- Right Side: Group Editor ---
         self.name_edit = QLineEdit()
-        self.name_edit.setPlaceholderText("e.g. Monday")
+        self.name_edit.setPlaceholderText("Group name")
+        self.name_edit.setStyleSheet(
+            "font-size: 16px; font-weight: 600; padding: 9px 10px;"
+        )
         self.name_edit.textChanged.connect(self._on_name_change)
 
         self.avail_list = QListWidget()
         self.mem_list = QListWidget()
 
-        self.btn_add = QPushButton("Add →")
-        self.btn_remove = QPushButton("← Remove")
-        self.btn_up = QPushButton("↑ Up")
-        self.btn_down = QPushButton("↓ Down")
-        self.btn_add.clicked.connect(self._add)
-        self.btn_remove.clicked.connect(self._remove)
+        for list_widget in (self.avail_list, self.mem_list):
+            list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            list_widget.setWordWrap(True)
+
+        self.avail_list.setToolTip("Double-click to add to the group")
+        self.mem_list.setToolTip("Double-click to remove from the group")
+
+        self.avail_list.itemDoubleClicked.connect(self._on_avail_double_click)
+        self.mem_list.itemDoubleClicked.connect(self._on_mem_double_click)
+
+        self.btn_up = QPushButton("↑")
+        self.btn_down = QPushButton("↓")
+        self.btn_up.setToolTip("Move up")
+        self.btn_down.setToolTip("Move down")
+        for btn in (self.btn_up, self.btn_down):
+            btn.setFixedWidth(38)
         self.btn_up.clicked.connect(lambda: self._move(-1))
         self.btn_down.clicked.connect(lambda: self._move(1))
 
-        self.btn_start = QPushButton("▶  Start")
+        self.btn_start = QPushButton("Start")
         self.btn_start.setObjectName("startBtn")
+        self.btn_start.setMinimumHeight(44)
         self.btn_start.clicked.connect(self._start)
 
         right = QVBoxLayout()
-        right.setSpacing(16)
-
-        name_row = QHBoxLayout()
-        name_row.addWidget(QLabel("Group name:"))
-        name_row.addWidget(self.name_edit, 1)
-        right.addLayout(name_row)
+        right.setSpacing(10)
+        right.addWidget(self.name_edit)
 
         lists_row = QHBoxLayout()
         lists_row.setSpacing(12)
 
         avail_box = QVBoxLayout()
-        avail_box.addWidget(QLabel("Available routines"))
+        avail_box.setSpacing(4)
+        avail_box.addWidget(self._section_label("Routines"))
         avail_box.addWidget(self.avail_list, 1)
 
-        mid_box = QVBoxLayout()
-        mid_box.addStretch()
-        mid_box.addWidget(self.btn_add)
-        mid_box.addWidget(self.btn_remove)
-        mid_box.addStretch()
-
         mem_box = QVBoxLayout()
-        mem_box.addWidget(QLabel("Order in group"))
+        mem_box.setSpacing(4)
+        mem_box.addWidget(self._section_label("Order"))
         mem_box.addWidget(self.mem_list, 1)
+
         order_box = QHBoxLayout()
+        order_box.setSpacing(8)
         order_box.addWidget(self.btn_up)
         order_box.addWidget(self.btn_down)
+        order_box.addStretch()
         mem_box.addLayout(order_box)
 
         lists_row.addLayout(avail_box, 1)
-        lists_row.addLayout(mid_box)
         lists_row.addLayout(mem_box, 1)
 
         right.addLayout(lists_row, 1)
@@ -97,13 +109,21 @@ class GroupsTab(QWidget):
         right_w = QWidget()
         right_w.setLayout(right)
 
-        # --- Main Layout ---
         root = QHBoxLayout(self)
-        root.setContentsMargins(20, 20, 20, 20)
+        root.setContentsMargins(18, 18, 18, 18)
+        root.setSpacing(18)
         root.addWidget(left_w)
         root.addWidget(right_w, 1)
 
         self.refresh()
+
+    @staticmethod
+    def _section_label(text):
+        label = QLabel(text)
+        label.setStyleSheet(
+            "color: #8A8A8A; font-size: 12px; padding-left: 2px;"
+        )
+        return label
 
     # ---------------------------------------------------------------
     def refresh(self):
@@ -145,10 +165,7 @@ class GroupsTab(QWidget):
         g = self._current_group
         enabled = g is not None
 
-        for w in (
-            self.name_edit, self.btn_add, self.btn_remove,
-            self.btn_up, self.btn_down, self.btn_start, self.btn_del,
-        ):
+        for w in (self.name_edit, self.btn_up, self.btn_down, self.btn_start, self.btn_del):
             w.setEnabled(enabled)
 
         self.avail_list.clear()
@@ -161,22 +178,43 @@ class GroupsTab(QWidget):
 
         self.name_edit.setText(g.name)
 
-        g.object_ids = [oid for oid in g.object_ids if self.storage.get_object(oid)]
+        # Bank List (ทุกท่า)
+        for obj in self.storage.objects:
+            item = QListWidgetItem(f"{obj.name}\n{obj.list_description}")
+            item.setData(Qt.UserRole, obj.id)
+            self.avail_list.addItem(item)
 
-        for oid in g.object_ids:
+        # Sequence List (ใช้ Index อ้างอิง ไม่ใช่ ID ตรงๆ)
+        for idx, oid in enumerate(g.object_ids):
             obj = self.storage.get_object(oid)
             if obj:
-                item = QListWidgetItem(obj.name)
-                item.setData(Qt.UserRole, oid)
+                item = QListWidgetItem(f"{obj.name}\n{obj.list_description}")
+                # เก็บ Index ใน Group ไว้ใช้ลบ (เพราะมี ID ซ้ำได้)
+                item.setData(Qt.UserRole, idx)
                 self.mem_list.addItem(item)
 
-        for obj in self.storage.objects:
-            if obj.id not in g.object_ids:
-                item = QListWidgetItem(obj.name)
-                item.setData(Qt.UserRole, obj.id)
-                self.avail_list.addItem(item)
-
         self._loading = False
+
+    def _on_avail_double_click(self, item):
+        if not self._current_group:
+            return
+        oid = item.data(Qt.UserRole)
+        # เพิ่มต่อท้าย Group (ซ้ำได้)
+        self._current_group.object_ids.append(oid)
+        self.storage.save()
+        self._update_editor()
+        # เลื่อน Scroll ลงไปล่างสุด
+        self.mem_list.scrollToBottom()
+
+    def _on_mem_double_click(self, item):
+        if not self._current_group:
+            return
+        idx = item.data(Qt.UserRole)
+        if 0 <= idx < len(self._current_group.object_ids):
+            # ลบตัวที่คลิกออก
+            del self._current_group.object_ids[idx]
+            self.storage.save()
+            self._update_editor()
 
     def _on_name_change(self, text):
         if self._loading or not self._current_group:
@@ -210,37 +248,12 @@ class GroupsTab(QWidget):
         self._current_group = None
         self.refresh()
 
-    def _add(self):
-        if not self._current_group:
-            return
-        item = self.avail_list.currentItem()
-        if not item:
-            return
-        oid = item.data(Qt.UserRole)
-        self._current_group.object_ids.append(oid)
-        self.storage.save()
-        self._update_editor()
-        self.mem_list.setCurrentRow(self.mem_list.count() - 1)
-
-    def _remove(self):
-        if not self._current_group:
-            return
-        item = self.mem_list.currentItem()
-        if not item:
-            return
-        oid = item.data(Qt.UserRole)
-        if oid in self._current_group.object_ids:
-            self._current_group.object_ids.remove(oid)
-            self.storage.save()
-            self._update_editor()
-
     def _move(self, direction):
         if not self._current_group:
             return
-        item = self.mem_list.currentItem()
-        if not item:
+        row = self.mem_list.currentRow()
+        if row < 0:
             return
-        row = self.mem_list.row(item)
         new_row = row + direction
         ids = self._current_group.object_ids
         if new_row < 0 or new_row >= len(ids):
@@ -256,7 +269,7 @@ class GroupsTab(QWidget):
         if not self._current_group.object_ids:
             QMessageBox.warning(
                 self, "Empty Group",
-                "This group has no routines yet. Add at least one routine before starting.",
+                "This group has no routines yet. Double-click items in the Bank to add them.",
             )
             return
         self.start_group_requested.emit(self._current_group.id)

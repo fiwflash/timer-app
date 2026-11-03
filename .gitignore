@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.spec
+!IntervalTimer.spec
 
 # Virtual Environments
 .venv/
@@ -13,6 +14,9 @@ env/
 # Build & Dist output (PyInstaller, etc.)
 build/
 dist/
+
+# Local backups
+backup/
 
 # OS generated files
 Thumbs.db

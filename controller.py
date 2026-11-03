@@ -17,41 +17,32 @@ class AppController(QObject):
         self.overlay = OverlayWindow()
         self._quitting = False
 
-        # Engine → overlay
         self.engine.phase_changed.connect(self.overlay.update_phase)
         self.engine.tick.connect(self.overlay.update_time)
+        self.engine.check_started.connect(self.overlay.show_check)
         self.engine.object_finished.connect(self._on_object_finished)
         self.engine.waiting_for_next.connect(self.overlay.start_blinking)
+        self.overlay.check_set_toggled.connect(self.engine.set_check_state)
 
-        # Overlay buttons → controller
         self.overlay.btn_prev.clicked.connect(self._prev)
         self.overlay.btn_pause.clicked.connect(self._toggle_pause)
         self.overlay.btn_reset.clicked.connect(self._reset)
         self.overlay.btn_next.clicked.connect(self._next)
         self.overlay.closed.connect(self._on_overlay_closed)
 
-    # ---------------------------------------------------------------
     def start_group(self, group_id: str):
-        group = next(
-            (g for g in self.storage.groups if g.id == group_id), None
-        )
+        group = next((g for g in self.storage.groups if g.id == group_id), None)
         if not group:
             return
 
-        group.object_ids = [
-            oid for oid in group.object_ids
-            if self.storage.get_object(oid) is not None
-        ]
+        group.object_ids = [oid for oid in group.object_ids if self.storage.get_object(oid) is not None]
         if not group.object_ids:
-            QMessageBox.warning(
-                self.main_window, "Empty Group",
-                "This group has no usable routines.",
-            )
+            QMessageBox.warning(self.main_window, "Empty Group", "This group has no usable routines.")
             return
 
         self._quitting = False
         self.overlay.stop_blinking()
-        self.overlay.set_pause_icon(False) # รีเซ็ตสถานะปุ่ม
+        self.overlay.set_pause_icon(False)
         self.engine.start_group(group, self.storage)
         
         self.main_window.showMinimized()
@@ -62,7 +53,8 @@ class AppController(QObject):
     def _on_object_finished(self, is_last: bool):
         if is_last:
             self._quitting = True
-            QTimer.singleShot(700, lambda: QApplication.instance().quit())
+            # Let the completion sound finish before the app closes.
+            QTimer.singleShot(2200, lambda: QApplication.instance().quit())
 
     def _on_overlay_closed(self):
         if self._quitting:
@@ -74,12 +66,11 @@ class AppController(QObject):
         self.main_window.raise_()
         self.main_window.activateWindow()
 
-    # ---------------------------------------------------------------
     def _toggle_pause(self):
         if self.engine.finished:
             return
         paused = self.engine.toggle_pause()
-        self.overlay.set_pause_icon(paused) # เปลี่ยนไอคอนใน Overlay
+        self.overlay.set_pause_icon(paused)
 
     def _reset(self):
         self.overlay.stop_blinking()
