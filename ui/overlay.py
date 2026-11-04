@@ -25,6 +25,55 @@ PHASE_NAMES = {
     "check": "SETS",
 }
 
+class DragHandle(QWidget):
+    """แถบเล็ก ๆ ด้านบน overlay สำหรับลากย้ายหน้าต่าง"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedHeight(22)
+        self.setCursor(Qt.OpenHandCursor)
+        self.setStyleSheet("background: transparent;")
+        self._drag_offset = None
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.label = QLabel("⠿  ลากเพื่อย้าย")
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setStyleSheet(
+            "color: rgba(255, 255, 255, 0.65); font-size: 11px; background: transparent;"
+        )
+        layout.addWidget(self.label)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drag_offset = event.globalPosition().toPoint() - self.window().pos()
+            self.setCursor(Qt.ClosedHandCursor)
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._drag_offset is not None and event.buttons() & Qt.LeftButton:
+            new_pos = event.globalPosition().toPoint() - self._drag_offset
+            self.window().move(new_pos)
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drag_offset = None
+            self.setCursor(Qt.OpenHandCursor)
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+    def set_text_color(self, color: str):
+        self.label.setStyleSheet(
+            f"color: {color}; font-size: 11px; background: transparent;"
+        )
+
+
 class OverlayWindow(QWidget):
     closed = Signal()
     check_set_toggled = Signal(int, bool)
@@ -35,8 +84,8 @@ class OverlayWindow(QWidget):
             Qt.Window | Qt.WindowStaysOnTopHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
         )
         self.setWindowTitle(" ")
-        self.resize(520, 300) # ขยายความสูงขึ้นเล็กน้อยเพื่อให้พอดี 2 บรรทัด
-        self.setMinimumSize(320, 200)
+        self.resize(520, 330)
+        self.setMinimumSize(320, 230)
 
         self._bg_color = PHASE_COLORS["idle"]
         self._blinking = False
@@ -44,6 +93,7 @@ class OverlayWindow(QWidget):
         self._is_paused = False
         self._mode = "timer"
         self._check_buttons = []
+        self._window_drag_offset = None
 
         self._blink_timer = QTimer(self)
         self._blink_timer.setInterval(400)
@@ -109,7 +159,9 @@ class OverlayWindow(QWidget):
         root.setContentsMargins(16, 10, 16, 16)
         root.setSpacing(4)
 
-        # จัดเรียงใหม่: Name (ใหญ่), Desc (เล็ก), Phase, Time/Checks, Set
+        # แถบลากย้าย + Name (ใหญ่), Desc (เล็ก), Phase, Time/Checks, Set
+        self.drag_handle = DragHandle()
+        root.addWidget(self.drag_handle)
         root.addWidget(self.name_label)
         root.addWidget(self.desc_label)
         root.addWidget(self.phase_label)
@@ -272,6 +324,7 @@ class OverlayWindow(QWidget):
         self.desc_label.setStyleSheet(
             f"font-size: {self._info_px}px; font-weight: 400; color: {text}; background: transparent; opacity: 0.8;"
         )
+        self.drag_handle.set_text_color(text)
         self.set_label.setStyleSheet(
             f"font-size: {self._info_px}px; color: {text}; background: transparent;"
         )
@@ -320,6 +373,28 @@ class OverlayWindow(QWidget):
         self._compute_sizes()
         color = self._bg_color if (not self._blinking or self._blink_state) else "#FFFFFF"
         self._apply_colors(color)
+
+    # ลากจากพื้นที่ว่าง/ป้ายข้อความก็ย้ายหน้าต่างได้ (ปุ่มยังคลิกได้ปกติ)
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._window_drag_offset = event.globalPosition().toPoint() - self.pos()
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._window_drag_offset is not None and event.buttons() & Qt.LeftButton:
+            self.move(event.globalPosition().toPoint() - self._window_drag_offset)
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._window_drag_offset = None
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
