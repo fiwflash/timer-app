@@ -23,6 +23,7 @@ class AppController(QObject):
         self.engine.object_finished.connect(self._on_object_finished)
         self.engine.waiting_for_next.connect(self.overlay.start_blinking)
         self.overlay.check_set_toggled.connect(self.engine.set_check_state)
+        self.overlay.auto_next_toggled.connect(self.engine.set_auto_next)
 
         self.overlay.btn_prev.clicked.connect(self._prev)
         self.overlay.btn_pause.clicked.connect(self._toggle_pause)
@@ -43,6 +44,7 @@ class AppController(QObject):
         self._quitting = False
         self.overlay.stop_blinking()
         self.overlay.set_pause_icon(False)
+        self.overlay.set_auto_next(self.engine.auto_next)
         self.engine.start_group(group, self.storage)
         
         self.main_window.showMinimized()

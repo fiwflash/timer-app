@@ -28,6 +28,11 @@ class TimerEngine(QObject):
         self.mode = "timer"
         self.current_obj = None
         self.check_states = {}
+        self.auto_next = False
+        self._transition_timer = QTimer(self)
+        self._transition_timer.setSingleShot(True)
+        self._transition_timer.setInterval(1200)
+        self._transition_timer.timeout.connect(self._advance_after_delay)
 
     def build_sequence(self, obj: TimerObject) -> list:
         seq = []
@@ -49,6 +54,7 @@ class TimerEngine(QObject):
         return seq
 
     def start_group(self, group: Group, storage: Storage):
+        self._transition_timer.stop()
         self.group = group
         self.storage = storage
         self.obj_index = 0
@@ -139,7 +145,10 @@ class TimerEngine(QObject):
             play_object_done()
         self.object_finished.emit(is_last)
         if not is_last:
-            self.waiting_for_next.emit()
+            if self.auto_next:
+                self._transition_timer.start()
+            else:
+                self.waiting_for_next.emit()
 
     def toggle_pause(self) -> bool:
         if self.mode != "timer" or self.finished:
@@ -158,16 +167,33 @@ class TimerEngine(QObject):
         state = self.check_states.get(self.current_obj.id)
         if state is not None and 0 <= index < len(state):
             state[index] = bool(checked)
+        # Auto-next: เมื่อติ๊กครบทุกเซ็ตแล้วให้เลื่อนไปท่าถัดไปเอง (ถ้าเปิด AUTO)
+        if self.auto_next and state is not None and all(state):
+            self._transition_timer.start()
+        else:
+            self._transition_timer.stop()
 
     def reset_current(self):
+        self._transition_timer.stop()
         if self.mode == "check" and self.current_obj is not None:
             total = max(1, self.current_obj.sets)
             self.check_states[self.current_obj.id] = [False] * total
         self._load_object()
 
+    def set_auto_next(self, enabled: bool):
+        self.auto_next = bool(enabled)
+        if not self.auto_next and self._transition_timer.isActive():
+            self._transition_timer.stop()
+            self.waiting_for_next.emit()
+
+    def _advance_after_delay(self):
+        self._transition_timer.stop()
+        self.next_object()
+
     def next_object(self):
         if not self.group:
             return
+        self._transition_timer.stop()
         if self.obj_index + 1 < len(self.group.object_ids):
             self.obj_index += 1
             self._load_object()
@@ -184,12 +210,14 @@ class TimerEngine(QObject):
             self.waiting_for_next.emit()
 
     def prev_object(self):
+        self._transition_timer.stop()
         if self.obj_index > 0:
             self.obj_index -= 1
             self._load_object()
 
     def stop(self):
         self.timer.stop()
+        self._transition_timer.stop()
         self.finished = True
         self.group = None
         self.current_obj = None

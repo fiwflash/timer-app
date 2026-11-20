@@ -6,7 +6,7 @@ from PySide6.QtGui import QColor, QPalette, QIcon, QPixmap, QPainter
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton,
-    QStackedWidget,
+    QStackedWidget, QSizePolicy,
 )
 
 from models import fmt_clock
@@ -77,6 +77,7 @@ class DragHandle(QWidget):
 class OverlayWindow(QWidget):
     closed = Signal()
     check_set_toggled = Signal(int, bool)
+    auto_next_toggled = Signal(bool)
 
     def __init__(self):
         super().__init__()
@@ -107,16 +108,21 @@ class OverlayWindow(QWidget):
         self.name_label = QLabel("—")
         self.name_label.setAlignment(Qt.AlignCenter)
         self.name_label.setWordWrap(True)
+        self.name_label.setMaximumHeight(30)  # ประมาณ 1 บรรทัด
 
         self.desc_label = QLabel("—")
         self.desc_label.setAlignment(Qt.AlignCenter)
         self.desc_label.setWordWrap(True)
+        self.desc_label.setMaximumHeight(40)  # ประมาณ 2 บรรทัด
 
         self.phase_label = QLabel("—")
         self.phase_label.setAlignment(Qt.AlignCenter)
 
         self.time_label = QLabel("00:00")
         self.time_label.setAlignment(Qt.AlignCenter)
+        # ไม่ให้ขนาดตัวอักษร/ข้อความไปบังคับความสูงขั้นต่ำของหน้าต่าง
+        self.time_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        self.time_label.setMinimumSize(0, 0)
 
         # Check mode: one large checkbox-style button per set.
         self.check_panel = QWidget()
@@ -146,9 +152,22 @@ class OverlayWindow(QWidget):
             b.setFixedSize(50, 50)
             b.setIconSize(QSize(24, 24))
 
+        self.btn_auto = QPushButton("AUTO")
+        self.btn_auto.setCheckable(True)
+        self.btn_auto.setCursor(Qt.PointingHandCursor)
+        self.btn_auto.setFocusPolicy(Qt.NoFocus)
+        self.btn_auto.setFixedSize(56, 26)
+        self.btn_auto.setToolTip(
+            "Auto-advance to the next routine when one finishes.\n"
+            "Off = pause and press Next."
+        )
+        self.btn_auto.toggled.connect(self.auto_next_toggled.emit)
+
         ctrl = QHBoxLayout()
-        ctrl.setSpacing(16)
+        ctrl.setSpacing(12)
         ctrl.addStretch()
+        ctrl.addWidget(self.btn_auto)
+        ctrl.addSpacing(12)
         ctrl.addWidget(self.btn_prev)
         ctrl.addWidget(self.btn_pause)
         ctrl.addWidget(self.btn_reset)
@@ -204,14 +223,18 @@ class OverlayWindow(QWidget):
         self._is_paused = paused
         self._refresh_styles()
 
+    def set_auto_next(self, enabled: bool):
+        self.btn_auto.blockSignals(True)
+        self.btn_auto.setChecked(bool(enabled))
+        self.btn_auto.blockSignals(False)
+
     def update_phase(self, phase, name, description, set_n, set_total):
         self._mode = "timer"
         self.center_stack.setCurrentWidget(self.time_label)
         self.btn_pause.setVisible(True)
         self._bg_color = PHASE_COLORS.get(phase, PHASE_COLORS["idle"])
         self.phase_label.setText(PHASE_NAMES.get(phase, ""))
-        self.name_label.setText(name)
-        self.desc_label.setText(description)
+        self._set_texts(name, description)
         self.set_label.setText(f"Set {set_n} / {set_total}" if set_total > 1 else "")
         if not self._blinking:
             self._refresh_styles()
@@ -222,13 +245,19 @@ class OverlayWindow(QWidget):
         self._blinking = False
         self._blink_timer.stop()
         self._bg_color = PHASE_COLORS["check"]
-        self.name_label.setText(name)
-        self.desc_label.setText(description)
+        self._set_texts(name, description)
         self.center_stack.setCurrentWidget(self.check_panel)
         self.btn_pause.setVisible(False)
         self._build_check_buttons(set_total, state)
         self._update_check_label()
         self._refresh_styles()
+
+    def _set_texts(self, name, description):
+        self.name_label.setText(name)
+        self.desc_label.setText(description)
+        # ข้อความเต็มยังดูได้จาก tooltip ถ้าถูกตัดเพราะหน้าต่างเล็ก
+        self.name_label.setToolTip(name)
+        self.desc_label.setToolTip(description)
 
     def _clear_check_buttons(self):
         while self.check_layout.count():
@@ -293,12 +322,6 @@ class OverlayWindow(QWidget):
         self.setPalette(pal)
         self.setAutoFillBackground(True)
 
-    def _compute_sizes(self):
-        h = max(self.height(), 1)
-        self._time_px = max(22, int(h * 0.34))
-        self._phase_px = max(14, int(h * 0.10))
-        self._info_px = max(10, int(h * 0.06))
-
     @staticmethod
     def _text_color_for(color: str) -> str:
         c = QColor(color)
@@ -348,6 +371,26 @@ class OverlayWindow(QWidget):
         for b in (self.btn_prev, self.btn_pause, self.btn_reset, self.btn_next):
             b.setStyleSheet(btn_style)
 
+        auto_style = f"""
+            QPushButton {{
+                background-color: rgba(0, 0, 0, 0.2);
+                border: 1px solid {text};
+                border-radius: 13px;
+                color: {text};
+                font-size: 11px;
+                font-weight: 700;
+                padding: 0px;
+            }}
+            QPushButton:hover {{ background-color: rgba(0, 0, 0, 0.4); }}
+            QPushButton:pressed {{ background-color: rgba(0, 0, 0, 0.6); }}
+            QPushButton:checked {{
+                background-color: {text};
+                color: {bg};
+                border-color: {text};
+            }}
+        """
+        self.btn_auto.setStyleSheet(auto_style)
+
         set_btn_style = f"""
             QPushButton {{
                 background-color: rgba(0, 0, 0, 0.18);
@@ -370,7 +413,8 @@ class OverlayWindow(QWidget):
             b.setStyleSheet(set_btn_style)
 
     def _refresh_styles(self):
-        self._compute_sizes()
+        # ใช้ขนาดตัวอักษรคงที่ — ถ้าคำนวณจากความสูงของหน้าต่างจะเกิด loop
+        # (font ใหญ่ขึ้น -> layout บังคับให้หน้าต่างสูงขึ้น -> font ใหญ่ขึ้นอีก)
         color = self._bg_color if (not self._blinking or self._blink_state) else "#FFFFFF"
         self._apply_colors(color)
 
