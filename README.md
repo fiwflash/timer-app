@@ -16,7 +16,7 @@
 - 🌐 **ท่าต่อข้าง:** กำหนดเป้าหมายเป็น “ต่อข้าง” และเช็ค 1 ครั้งต่อเซ็ตเมื่อทำครบทั้งสองข้าง
 - 🔄 **โหมดแยกข้าง (/ข้าง):** รองรับท่าฝึกที่ต้องทำสลับข้าง เช่น แขนซ้าย/ขวา พร้อมเวลาสลับข้างอัตโนมัติ
 - 📑 **จัดกลุ่มโปรแกรมฝึก (Groups):** นำรายการซ้อมหลายชุดมาเรียงร้อยต่อกันเป็น Session ซ้อมยาวๆ ได้
-- 🗓 **แผน 7 วันพร้อมใช้:** โหลดโปรแกรม Boxing Fitness Program (จันทร์–อาทิตย์) จาก `workout.md` เป็น Group เริ่มต้น
+- 🗓 **แผน Hybrid พร้อมใช้:** โหลดโปรแกรม Hybrid Muscle & Boxing Fitness Program (Dorm Edition) เป็น Group เริ่มต้น (วอร์มอัป A + เวท 2 ท่า + ทักษะมวย + คูลดาวน์ K)
 - 🔔 **ระบบเสียงแจ้งเตือน:** เสียงดังเต็มระดับ (normalize) พร้อมบีบเตือนนับถอยหลัง 3-2-1 และเสียงต่างกันสำหรับจบเซ็ต/จบโปรแกรม (`bell.wav`, `bell2.wav`)
 - 🖥 **หน้าต่าง Overlay:** หน้าต่างแสดงตัวเลขนับถอยหลังขนาดใหญ่ ชัดเจน มองเห็นง่ายขณะออกกำลังกาย และลากย้ายได้จากแถบด้านบนหรือพื้นที่ว่างของหน้าต่าง
 - 💾 **บันทึกข้อมูลอัตโนมัติ:** บันทึกรายการที่ตั้งไว้ลงในเครื่องอัตโนมัติ เรียกใช้ต่อได้ทันที
@@ -101,15 +101,19 @@ Goblet Squat (Check) → Jump Rope (Timer) → DB Floor Press (Check) → Plank 
 
 จุดสีของ Overlay: เหลือง = เตรียมตัว, เขียว = ทำงาน, แดง = พัก, น้ำเงิน = โหมดเช็คเซ็ต
 
-### แผน 7 วันเริ่มต้น
-`data.json` มาพร้อม Group จันทร์–อาทิตย์ จากโปรแกรม Boxing Fitness Program:
+### แผนเริ่มต้น (Hybrid Muscle & Boxing · Dorm Edition)
+`data.json` มาพร้อม Group จันทร์–อาทิตย์ และ Group เสริม จากโปรแกรม Hybrid Muscle & Boxing Fitness Program:
 
-- **จันทร์:** Strength A (ขา + ดัน + Core)
-- **อังคาร:** Boxing Skill + Jump Rope
-- **พุธ:** Active Recovery + Mobility + Prehab
-- **พฤหัสบดี:** Strength B (หลัง + ดึง + Core)
-- **ศุกร์:** Boxing Conditioning + Power
-- **เสาร์:** Full-Body Circuit + Reaction
-- **อาทิตย์:** พัก + ยืดเหยียดเบา ๆ
+- **จันทร์:** Upper Body Push & Pull (Floor Press + Row) + Wall Pad Snap
+- **อังคาร:** Shoulders & Arms (Press + Triceps Pushdown) + Shadow Boxing + Reflex Ball
+- **พุธ:** Active Recovery & AI Day (Mobility + Face Pull + Reflex เบา ๆ)
+- **พฤหัสบดี:** Lower Body Base (Goblet Squat + RDL) + Footwork
+- **ศุกร์:** Upper Pull & Push Burnout (Pull-up + Push-up) + Wall Pad Volume
+- **เสาร์:** Complete Rest + Weekly Review
+- **อาทิตย์:** Unilateral Legs & Delts (Reverse Lunge + Lateral Raise) + Power Circuit
+
+Group เสริม: **Morning Snack** (ตอนเช้า), **Midday Boxing Skill** (ตอนเที่ยง), **Rescue Day** (วันพลังงานหมด)
+
+ทุกวันฝึกมี Warm-up กลุ่ม A และ Cool-down กลุ่ม K ครบชุด เพื่อเซฟข้อศอกขวาและเอ็นร้อยหวาย
 
 แก้ไขลำดับ/จำนวนเซ็ต/น้ำหนักได้จากแท็บ Bank และ Groups ตามต้องการ
