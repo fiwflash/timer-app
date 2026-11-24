@@ -2,14 +2,15 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem,
-    QPushButton, QLabel, QLineEdit, QMessageBox,
+    QPushButton, QLabel, QLineEdit, QMessageBox, QComboBox,
 )
 
-from models import Group, Storage
+from models import Group, Storage, progression_for
 
 
 class GroupsTab(QWidget):
     start_group_requested = Signal(str)
+    week_changed = Signal()
 
     def __init__(self, storage: Storage):
         super().__init__()
@@ -109,11 +110,30 @@ class GroupsTab(QWidget):
         right_w = QWidget()
         right_w.setLayout(right)
 
-        root = QHBoxLayout(self)
-        root.setContentsMargins(18, 18, 18, 18)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(18, 18, 18, 18)
+        outer.setSpacing(12)
+
+        week_bar = QHBoxLayout()
+        week_bar.setSpacing(8)
+        week_lbl = QLabel("Week")
+        week_lbl.setStyleSheet("color: #8A8A8A; font-size: 13px;")
+        self.week_combo = QComboBox()
+        for w in range(1, 9):
+            phase, _, _ = progression_for(w)
+            self.week_combo.addItem(f"Week {w} · {phase}", w)
+        self.week_combo.setCurrentIndex(self.storage.week - 1)
+        self.week_combo.currentIndexChanged.connect(self._on_week_change)
+        week_bar.addWidget(week_lbl)
+        week_bar.addWidget(self.week_combo)
+        week_bar.addStretch()
+        outer.addLayout(week_bar)
+
+        root = QHBoxLayout()
         root.setSpacing(18)
         root.addWidget(left_w)
         root.addWidget(right_w, 1)
+        outer.addLayout(root, 1)
 
         self.refresh()
 
@@ -124,6 +144,13 @@ class GroupsTab(QWidget):
             "color: #8A8A8A; font-size: 12px; padding-left: 2px;"
         )
         return label
+
+    def _on_week_change(self):
+        if self._loading:
+            return
+        self.storage.set_week(self.week_combo.currentData())
+        self._update_editor()
+        self.week_changed.emit()
 
     # ---------------------------------------------------------------
     def refresh(self):
@@ -180,7 +207,7 @@ class GroupsTab(QWidget):
 
         # Bank List (ทุกท่า)
         for obj in self.storage.objects:
-            item = QListWidgetItem(f"{obj.name}\n{obj.list_description}")
+            item = QListWidgetItem(f"{obj.name}\n{obj.list_description(self.storage.current_week)}")
             item.setData(Qt.UserRole, obj.id)
             self.avail_list.addItem(item)
 
@@ -188,7 +215,7 @@ class GroupsTab(QWidget):
         for idx, oid in enumerate(g.object_ids):
             obj = self.storage.get_object(oid)
             if obj:
-                item = QListWidgetItem(f"{obj.name}\n{obj.list_description}")
+                item = QListWidgetItem(f"{obj.name}\n{obj.list_description(self.storage.current_week)}")
                 # เก็บ Index ใน Group ไว้ใช้ลบ (เพราะมี ID ซ้ำได้)
                 item.setData(Qt.UserRole, idx)
                 self.mem_list.addItem(item)

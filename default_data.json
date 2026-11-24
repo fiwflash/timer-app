@@ -213,8 +213,11 @@
       "prep": 0,
       "rest": 0,
       "per_side": false,
-      "target": "8-10 reps",
-      "weight": "DB"
+      "target": "",
+      "weight": "DB",
+      "rep_min": 8,
+      "rep_max": 10,
+      "rep_suffix": "reps"
     },
     {
       "id": "3f9ae3ed1bbb4f3f91ee14e251960930",
@@ -225,8 +228,11 @@
       "prep": 0,
       "rest": 0,
       "per_side": false,
-      "target": "10-12 ต่อข้าง",
-      "weight": "DB"
+      "target": "",
+      "weight": "DB",
+      "rep_min": 10,
+      "rep_max": 12,
+      "rep_suffix": "ต่อข้าง"
     },
     {
       "id": "4f9b8b0d233445f7983ca12228fe3968",
@@ -237,8 +243,11 @@
       "prep": 0,
       "rest": 0,
       "per_side": false,
-      "target": "8-10 reps",
-      "weight": "DB"
+      "target": "",
+      "weight": "DB",
+      "rep_min": 8,
+      "rep_max": 10,
+      "rep_suffix": "reps"
     },
     {
       "id": "5f491839e1d649e6996471952085c03d",
@@ -249,8 +258,11 @@
       "prep": 0,
       "rest": 0,
       "per_side": false,
-      "target": "12-15 reps",
-      "weight": "Band"
+      "target": "",
+      "weight": "Band",
+      "rep_min": 12,
+      "rep_max": 15,
+      "rep_suffix": "reps"
     },
     {
       "id": "4bbd8fff11e04c89884aa628a078c671",
@@ -261,8 +273,11 @@
       "prep": 0,
       "rest": 0,
       "per_side": false,
-      "target": "10-12 reps",
-      "weight": "DB"
+      "target": "",
+      "weight": "DB",
+      "rep_min": 10,
+      "rep_max": 12,
+      "rep_suffix": "reps"
     },
     {
       "id": "a43d0f3934c7407f9ca20c4c649d4e52",
@@ -273,8 +288,11 @@
       "prep": 0,
       "rest": 0,
       "per_side": false,
-      "target": "10-12 reps",
-      "weight": "DB"
+      "target": "",
+      "weight": "DB",
+      "rep_min": 10,
+      "rep_max": 12,
+      "rep_suffix": "reps"
     },
     {
       "id": "2f7ab63a29594e6b9807b00798dc5842",
@@ -285,8 +303,11 @@
       "prep": 0,
       "rest": 0,
       "per_side": false,
-      "target": "5-8 reps",
-      "weight": "Pull-up bar"
+      "target": "",
+      "weight": "Pull-up bar",
+      "rep_min": 5,
+      "rep_max": 8,
+      "rep_suffix": "reps"
     },
     {
       "id": "be9b53022309448bb1609598411114ca",
@@ -297,8 +318,11 @@
       "prep": 0,
       "rest": 0,
       "per_side": false,
-      "target": "12-15 reps",
-      "weight": "Bodyweight + แท่น"
+      "target": "",
+      "weight": "Bodyweight + แท่น",
+      "rep_min": 12,
+      "rep_max": 15,
+      "rep_suffix": "reps"
     },
     {
       "id": "46b01a7c841b48b896db406c5a760351",
@@ -309,8 +333,11 @@
       "prep": 0,
       "rest": 0,
       "per_side": false,
-      "target": "8-10 ต่อข้าง",
-      "weight": "DB"
+      "target": "",
+      "weight": "DB",
+      "rep_min": 8,
+      "rep_max": 10,
+      "rep_suffix": "ต่อข้าง"
     },
     {
       "id": "dd01ccf2588c43cb815f7d52180e47c8",
@@ -321,8 +348,11 @@
       "prep": 0,
       "rest": 0,
       "per_side": false,
-      "target": "12-15 reps",
-      "weight": "DB"
+      "target": "",
+      "weight": "DB",
+      "rep_min": 12,
+      "rep_max": 15,
+      "rep_suffix": "reps"
     },
     {
       "id": "844cd668aea74562a5221a2f9f3c08ac",

@@ -142,6 +142,19 @@ class ObjectsTab(QWidget):
         self.weight_input.setPlaceholderText("e.g. 14 kg / Bodyweight / Band")
         self.weight_input.textChanged.connect(self._on_form_change)
 
+        self.sp_rep_min = QSpinBox()
+        self.sp_rep_min.setRange(0, 99)
+        self.sp_rep_min.setToolTip("ค่าล่างของช่วง reps (0 = ไม่ปรับตาม week)")
+        self.sp_rep_min.valueChanged.connect(self._on_form_change)
+        self.sp_rep_max = QSpinBox()
+        self.sp_rep_max.setRange(0, 99)
+        self.sp_rep_max.setToolTip("ค่าบนของช่วง reps")
+        self.sp_rep_max.valueChanged.connect(self._on_form_change)
+        self.rep_suffix_input = QLineEdit()
+        self.rep_suffix_input.setPlaceholderText("reps")
+        self.rep_suffix_input.setToolTip("หน่วย เช่น reps / ต่อข้าง")
+        self.rep_suffix_input.textChanged.connect(self._on_form_change)
+
         top_row = QHBoxLayout()
         top_row.setSpacing(12)
         top_row.addWidget(self._make_input_group("Type", self.mode_combo), 1)
@@ -171,6 +184,16 @@ class ObjectsTab(QWidget):
         check_grid.addWidget(self._make_input_group("Target", self.target_input), 0, 0)
         check_grid.addWidget(self._make_input_group("Weight / Equipment", self.weight_input), 0, 1)
         check_layout.addLayout(check_grid)
+
+        prog_label = QLabel("Progressive (0 = ปิด) — reps บวกตาม week อัตโนมัติ")
+        prog_label.setStyleSheet("color: #8A8A8A; font-size: 12px;")
+        check_layout.addWidget(prog_label)
+        prog_row = QHBoxLayout()
+        prog_row.setSpacing(12)
+        prog_row.addWidget(self._make_input_group("Reps Min", self.sp_rep_min), 1)
+        prog_row.addWidget(self._make_input_group("Reps Max", self.sp_rep_max), 1)
+        prog_row.addWidget(self._make_input_group("Unit", self.rep_suffix_input), 1)
+        check_layout.addLayout(prog_row)
         check_layout.addStretch()
 
         self.editor_stack = QStackedWidget()
@@ -214,7 +237,7 @@ class ObjectsTab(QWidget):
         self.list.clear()
         for o in self.storage.objects:
             item = QListWidgetItem()
-            item.setText(f"{o.name}\n{o.list_description}")
+            item.setText(f"{o.name}\n{o.list_description(self.storage.current_week)}")
             item.setData(Qt.UserRole, o.id)
             self.list.addItem(item)
         self._loading = False
@@ -244,6 +267,7 @@ class ObjectsTab(QWidget):
             self.mode_combo, self.name_input, self.sp_sets, self.sp_work,
             self.sp_prep, self.sp_rest, self.cb_side,
             self.target_input, self.weight_input,
+            self.sp_rep_min, self.sp_rep_max, self.rep_suffix_input,
         ):
             w.setEnabled(enabled)
         self.btn_del.setEnabled(enabled)
@@ -251,6 +275,9 @@ class ObjectsTab(QWidget):
             self.name_input.clear()
             self.target_input.clear()
             self.weight_input.clear()
+            self.rep_suffix_input.clear()
+            self.sp_rep_min.setValue(0)
+            self.sp_rep_max.setValue(0)
             self.desc_label.setText("—")
 
     def _on_select(self, row):
@@ -272,6 +299,9 @@ class ObjectsTab(QWidget):
             self.cb_side.setChecked(obj.per_side)
             self.target_input.setText(obj.target)
             self.weight_input.setText(obj.weight)
+            self.sp_rep_min.setValue(obj.rep_min)
+            self.sp_rep_max.setValue(obj.rep_max)
+            self.rep_suffix_input.setText(obj.rep_suffix)
             self._loading = False
             self._update_preview()
             self._update_editor_state()
@@ -284,8 +314,10 @@ class ObjectsTab(QWidget):
             per_side=self.cb_side.isChecked(),
             target=self.target_input.text().strip(),
             weight=self.weight_input.text().strip(),
+            rep_min=self.sp_rep_min.value(), rep_max=self.sp_rep_max.value(),
+            rep_suffix=self.rep_suffix_input.text().strip() or "reps",
         )
-        self.desc_label.setText(tmp.description)
+        self.desc_label.setText(tmp.description(self.storage.current_week))
 
     def _on_form_change(self):
         if self._loading or not self._editing_id:
@@ -303,6 +335,9 @@ class ObjectsTab(QWidget):
         obj.per_side = self.cb_side.isChecked()
         obj.target = self.target_input.text().strip()
         obj.weight = self.weight_input.text().strip()
+        obj.rep_min = self.sp_rep_min.value()
+        obj.rep_max = self.sp_rep_max.value()
+        obj.rep_suffix = self.rep_suffix_input.text().strip() or "reps"
         self.storage.save()
 
         self._update_preview()
@@ -313,7 +348,7 @@ class ObjectsTab(QWidget):
         for i in range(self.list.count()):
             if i < len(self.storage.objects) and self.storage.objects[i].id == obj.id:
                 item = self.list.item(i)
-                item.setText(f"{obj.name}\n{obj.list_description}")
+                item.setText(f"{obj.name}\n{obj.list_description(self.storage.current_week)}")
                 break
 
     def _new(self):

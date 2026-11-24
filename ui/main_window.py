@@ -32,6 +32,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.tabs)
 
         self.objects_tab.data_changed.connect(self.groups_tab.refresh)
+        self.groups_tab.week_changed.connect(self.objects_tab.refresh)
         self.groups_tab.start_group_requested.connect(
             self.controller.start_group
         )

@@ -29,6 +29,7 @@ class TimerEngine(QObject):
         self.current_obj = None
         self.check_states = {}
         self.auto_next = False
+        self.week = 1
         self._transition_timer = QTimer(self)
         self._transition_timer.setSingleShot(True)
         self._transition_timer.setInterval(1200)
@@ -36,10 +37,11 @@ class TimerEngine(QObject):
 
     def build_sequence(self, obj: TimerObject) -> list:
         seq = []
+        sets = obj.effective_sets(self.week)
         if obj.prep > 0:
             seq.append({"phase": "prep", "duration": obj.prep, "set": 1})
 
-        for i in range(obj.sets):
+        for i in range(sets):
             if obj.per_side:
                 seq.append({"phase": "work", "duration": obj.work, "set": i + 1})
                 if obj.prep > 0:
@@ -48,7 +50,7 @@ class TimerEngine(QObject):
             else:
                 seq.append({"phase": "work", "duration": obj.work, "set": i + 1})
 
-            if i < obj.sets - 1 and obj.rest > 0:
+            if i < sets - 1 and obj.rest > 0:
                 seq.append({"phase": "rest", "duration": obj.rest, "set": i + 1})
 
         return seq
@@ -57,6 +59,7 @@ class TimerEngine(QObject):
         self._transition_timer.stop()
         self.group = group
         self.storage = storage
+        self.week = getattr(storage, "current_week", 1)
         self.obj_index = 0
         self.current_obj = None
         self.mode = "timer"
@@ -83,12 +86,12 @@ class TimerEngine(QObject):
             self.phase_index = 0
             self.remaining = 0
             self.timer.stop()
-            total = max(1, obj.sets)
+            total = obj.effective_sets(self.week)
             state = self.check_states.get(obj.id)
             if not isinstance(state, list) or len(state) != total:
                 state = [False] * total
                 self.check_states[obj.id] = state
-            self.check_started.emit(obj.name, obj.description, total, list(state))
+            self.check_started.emit(obj.name, obj.description(self.week), total, list(state))
             return
 
         self.mode = "timer"
@@ -106,7 +109,7 @@ class TimerEngine(QObject):
         step = self.sequence[self.phase_index]
         obj = self.storage.get_object(self.group.object_ids[self.obj_index])
         # ส่ง name และ description แยกกัน
-        self.phase_changed.emit(step["phase"], obj.name, obj.description, step["set"], obj.sets)
+        self.phase_changed.emit(step["phase"], obj.name, obj.description(self.week), step["set"], obj.effective_sets(self.week))
         self.tick.emit(self.remaining, step["phase"])
 
     def _on_tick(self):
@@ -176,7 +179,7 @@ class TimerEngine(QObject):
     def reset_current(self):
         self._transition_timer.stop()
         if self.mode == "check" and self.current_obj is not None:
-            total = max(1, self.current_obj.sets)
+            total = self.current_obj.effective_sets(self.week)
             self.check_states[self.current_obj.id] = [False] * total
         self._load_object()
 

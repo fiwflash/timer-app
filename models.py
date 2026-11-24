@@ -34,6 +34,40 @@ def fmt_clock(sec: int) -> str:
     return f"{m:02d}:{s:02d}"
 
 
+# ตาราง Progressive Overload (อ้างอิงตาราง 6.1)
+# week -> (phase, delta, setsMul)
+WEEKS = {
+    1: ("Foundation", 0, 1.0),
+    2: ("Foundation", 0, 1.0),
+    3: ("Build", 1, 1.0),
+    4: ("Deload", 0, 0.6),
+    5: ("Intensify", 2, 1.0),
+    6: ("Intensify", 2, 1.0),
+    7: ("Peak", 3, 1.0),
+    8: ("Deload", 0, 0.6),
+}
+
+
+def progression_for(week):
+    phase, delta, sets_mul = WEEKS.get(int(week), WEEKS[1])
+    return phase, delta, sets_mul
+
+
+# ค่า base reps ของท่าเวทหลัก 10 ท่า (ใช้ migrate ข้อมูลเดิมที่ยังไม่มี rep fields)
+PROGRESSIVE_BASE = {
+    "Dumbbell Floor Press": (8, 10, "reps"),
+    "One-Arm Dumbbell Row": (10, 12, "ต่อข้าง"),
+    "Dumbbell Shoulder Press": (8, 10, "reps"),
+    "Band Triceps Pushdown": (12, 15, "reps"),
+    "Pull-up (หรือ Negative)": (5, 8, "reps"),
+    "Push-up บนแท่น": (12, 15, "reps"),
+    "Goblet Squat": (10, 12, "reps"),
+    "Romanian Deadlift (RDL)": (10, 12, "reps"),
+    "Reverse Lunge": (8, 10, "ต่อข้าง"),
+    "Dumbbell Lateral Raise": (12, 15, "reps"),
+}
+
+
 @dataclass
 class TimerObject:
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
@@ -46,32 +80,47 @@ class TimerObject:
     per_side: bool = False
     target: str = ""  # check mode: "10–12 reps", "60s", "40m"
     weight: str = ""  # check mode: "14 kg", "Bodyweight", "Band"
+    rep_min: int = 0  # progressive overload base (0 = ไม่บวก reps ตาม week)
+    rep_max: int = 0
+    rep_suffix: str = "reps"
 
-    @property
-    def description(self) -> str:
+    def effective_sets(self, week: int = 1) -> int:
+        """จำนวนเซ็ตจริงตาม week (deload W4/W8 ลด ~40% อย่างน้อย 1)"""
+        _, _, sets_mul = progression_for(week)
+        return max(1, round(self.sets * sets_mul))
+
+    def effective_target(self, week: int = 1) -> str:
+        """เป้า reps ตาม week (บวก delta) หรือข้อความเดิมถ้าไม่ progressive"""
+        if self.mode == "check" and self.rep_min > 0 and self.rep_max > 0:
+            _, delta, _ = progression_for(week)
+            return f"{self.rep_min + delta}–{self.rep_max + delta} {self.rep_suffix}"
+        return self.target
+
+    def description(self, week: int = 1) -> str:
+        sets = self.effective_sets(week)
         if self.mode == "check":
-            base = f"{self.sets} × {self.target}" if self.target else f"{self.sets} sets"
+            target = self.effective_target(week)
+            base = f"{sets} × {target}" if target else f"{sets} sets"
             if self.weight:
                 base += f" · {self.weight}"
             return base
 
         # Timer description
-        base = f"{self.sets} × {fmt_time(self.work)}"
+        base = f"{sets} × {fmt_time(self.work)}"
         if self.per_side:
             base += " /side"
         extras = []
         if self.prep > 0:
             extras.append(f"prep {self.prep}")
-        if self.rest > 0 and self.sets > 1:
+        if self.rest > 0 and sets > 1:
             extras.append(f"rest {self.rest}")
         if extras:
             base += " (" + ", ".join(extras) + ")"
         return base
 
-    @property
-    def list_description(self) -> str:
+    def list_description(self, week: int = 1) -> str:
         kind = "Check" if self.mode == "check" else "Timer"
-        return f"{kind} · {self.description}"
+        return f"{kind} · {self.description(week)}"
 
 
 @dataclass
@@ -85,10 +134,19 @@ class Storage:
     def __init__(self):
         self.objects = []
         self.groups = []
+        self.week = 1
         self.load()
         if not self.objects:
             self.objects.append(TimerObject())
             self.save()
+
+    @property
+    def current_week(self) -> int:
+        return self.week
+
+    def set_week(self, week):
+        self.week = max(1, min(8, int(week)))
+        self.save()
 
     def load(self):
         # ครั้งแรก: คัดลอก template ข้อมูลเริ่มต้นมาเป็น data.json
@@ -103,6 +161,7 @@ class Storage:
             return
         try:
             data = json.loads(DATA_FILE.read_text(encoding="utf-8"))
+            self.week = max(1, min(8, int(data.get("week", 1))))
             self.objects = []
             for o in data.get("objects", []):
                 # Backward compatibility: ถ้าไฟล์เก่ามี custom_name ให้ย้ายมาเป็น name
@@ -113,7 +172,12 @@ class Storage:
                 # ถ้าไม่มี name ให้ใส่ Default
                 if "name" not in o:
                     o["name"] = "Exercise"
-                self.objects.append(TimerObject(**o))
+                obj = TimerObject(**o)
+                # Migration: เติม rep fields ให้ท่า progressive เดิมที่ยังไม่มี
+                base = PROGRESSIVE_BASE.get(obj.name)
+                if base and "rep_min" not in o and "rep_max" not in o:
+                    obj.rep_min, obj.rep_max, obj.rep_suffix = base
+                self.objects.append(obj)
 
             self.groups = [Group(**g) for g in data.get("groups", [])]
         except Exception as e:
@@ -121,6 +185,7 @@ class Storage:
 
     def save(self):
         data = {
+            "week": self.week,
             "objects": [asdict(o) for o in self.objects],
             "groups": [asdict(g) for g in self.groups],
         }
